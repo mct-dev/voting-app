@@ -5,7 +5,6 @@ AWS.config.update({region: 'us-east-1'});
 
 module.exports.postVote= async (event, context) => {
   const sqs = AWS.SQS({apiVersion: '2012-11-05'});
-  const votesQueue = sqs.get
   return {
     statusCode: 200,
     body: JSON.stringify({
