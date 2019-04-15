@@ -13,8 +13,12 @@ provider:
 
 functions:
   post-vote:
-    handler: handler.postVote
+    handler: post-vote.postVote
     events:
       - http:
           path: vote
-          method: get
+          method: post
+  handle-votes:
+    handler: handle-votes.handleSqsMessages
+    events:
+      - schedule: rate(2 minutes)

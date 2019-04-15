@@ -8,7 +8,6 @@ module.exports.postVote= async (event, context) => {
   let voteQueueUrl;
   let sqsMessageResponse;
 
-  console.log(event)
   try {
     voteQueueUrl = await sqs.getQueueUrl({
         QueueName: 'voting-app-queue',
@@ -32,7 +31,4 @@ module.exports.postVote= async (event, context) => {
       input: event,
     }),
   };
-
-  // Use this code if you don't use the http event with the LAMBDA-PROXY integration
-  // return { message: 'Go Serverless v1.0! Your function executed successfully!', event };
 };
