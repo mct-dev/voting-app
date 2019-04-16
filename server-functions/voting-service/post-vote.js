@@ -3,7 +3,7 @@ const AWS = require('aws-sdk');
 
 AWS.config.update({region: 'us-east-1'});
 
-module.exports.postVote= async (event, context) => {
+module.exports.postVote = async (event, context) => {
   let sqs = new AWS.SQS({apiVersion: '2012-11-05'});
   let voteQueueUrl;
   let sqsMessageResponse;
