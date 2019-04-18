@@ -7,9 +7,15 @@
 		{
 			"type": "node",
 			"request": "launch",
+			"name": "node <current file>",
+			"program": "${file}"
+		},
+		{
+			"type": "node",
+			"request": "launch",
 			"name": "sls debug post-vote",
 			"cwd": "${fileDirname}",
-			"program": "${workspaceFolder}/server-functions/node_modules/.bin/sls",
+			"program": "${workspaceFolder}/server-functions/node_modules/.bin/serverless",
 			"args": [
 				"invoke",
 				"local",
@@ -24,7 +30,7 @@
 			"request": "launch",
 			"name": "sls debug handle-vote",
 			"cwd": "${fileDirname}",
-			"program": "${workspaceFolder}/server-functions/node_modules/.bin/sls",
+			"program": "serverless",
 			"args": [
 				"invoke",
 				"local",
