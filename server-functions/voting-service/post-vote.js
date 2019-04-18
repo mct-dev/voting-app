@@ -19,8 +19,10 @@ module.exports.postVote = async (event, context) => {
   }
   catch (err) {
     return {
-      statusCode: 404,
-      body: JSON.stringify(err)
+      statusCode: 500,
+      body: {
+        error: err.stack
+      }
     }
   }
   return {
