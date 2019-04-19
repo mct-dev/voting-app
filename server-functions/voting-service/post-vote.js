@@ -3,22 +3,13 @@ const AWS = require('aws-sdk');
 
 AWS.config.update({region: 'us-east-1'});
 
-const badDataErrorResponse = (err) => {
-  return {
-    statusCode: 400,
-    body: { error: err }
-  };
-}
-
-const serverErrorResponse = (err) => {
-  return {
-    statusCode: 500,
-    body: { error: err }
-  };
-}
-
 const parseEventData = (apiEventData) => {
-  if (typeof apiEventData !== 'object' || !apiEventData.queryStringParameters) throw new Error('Incorrect data format.')
+  if (typeof apiEventData !== 'object' || !apiEventData.queryStringParameters) {
+
+    throw new Error('Incorrect data format.')
+
+  }
+
   return apiEventData.queryStringParameters;
 }
 
@@ -31,31 +22,55 @@ module.exports.postVote = async (event, context) => {
   let sqs = new AWS.SQS({apiVersion: '2012-11-05'});
   let voteQueueUrl;
   let sqsMessageResponse;
+  let voteData;
+
+  let returnData = {
+    statusCode: 200,
+    body: {}
+  };
 
   try {
-    let voteData = parseEventData(event);
+
+    voteData = parseEventData(event);
+
+  }
+  catch (err) {
+
+    returnData.statusCode = 400;
+    returnData.body = {
+      error: err
+    }
+
+    return returnData;
+  }
+
+  try {
+
     voteQueueUrl = await sqs.getQueueUrl({
         QueueName: 'voting-app-queue',
     }).promise();
+
     sqsMessageResponse = await sqs.sendMessage({
       MessageBody: JSON.stringify(voteData),
       QueueUrl: voteQueueUrl.QueueUrl
     }).promise()
+
   }
   catch (err) {
-    return {
-      statusCode: 500,
-      body: {
-        error: err.stack
-      }
+
+    returnData.statusCode = 500;
+    returnData.body = {
+      error: err
     }
+
+    return returnData;
   }
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      voteQueueUrl,
-      sqsMessageResponse,
-      input: event,
-    }),
-  };
+
+  returnData.body = {
+    voteQueueUrl,
+    sqsMessageResponse,
+    input: event
+  }
+
+  return returnData;
 };
