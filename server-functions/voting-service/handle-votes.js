@@ -8,17 +8,14 @@ const sqsQueueName = "voting-app-queue";
 AWS.config.update({region: "us-east-1"});
 
 const getQueueUrl = async (queueName) => {
-
   let queueUrlResponse = await sqs.getQueueUrl({
     QueueName: queueName
   }).promise();
 
   return queueUrlResponse.QueueUrl;
-
 };
 
 const getMessages = async (queueUrl) => {
-
   let messagesResponse = await sqs.receiveMessage({
     QueueUrl: queueUrl,
     WaitTimeSeconds: 5,
@@ -28,10 +25,9 @@ const getMessages = async (queueUrl) => {
   return messagesResponse && messagesResponse.Messages
     ? messagesResponse.Messages
     : [];
-
 };
 
-module.exports.handleSqsMessages = async (event) => {
+module.exports.handleSqsMessages = async () => {
   let queueUrl;
   let messages;
   let deleteResponse;
@@ -39,36 +35,38 @@ module.exports.handleSqsMessages = async (event) => {
   let msgBody;
 
   try {
-
     queueUrl = await getQueueUrl(sqsQueueName);
     messages = await getMessages(queueUrl);
-    if (messages.length)
 
-      for (let msg of messages) {
+    if (!messages.length) {
+      return 0;
+    }
 
-        msgId = msg.MessageId;
-        msgBody = JSON.parse(msg.Body);
+    for (let msg of messages) {
+      msgId = msg.MessageId;
+      msgBody = JSON.parse(msg.Body);
 
-        if (!(msgId && msgBody)) {
-          break;
-        }
-
-        await db.put({
-          TableName: dbTableName,
-          Item: {
-            VoteId: msgId,
-            VoteData: msgBody,
-          }
-        }).promise();
-
-        deleteResponse = await sqs.deleteMessage({
-          QueueUrl: queueUrl,
-          ReceiptHandle: msg.ReceiptHandle
-        }).promise();
-
-        console.log(`Message deleted from Dynamo DB. Table: ${dbTableName} | Message Id: ${msgId}`);
-
+      if (!(msgId && msgBody)) {
+        break;
       }
+
+      await db.put({
+        TableName: dbTableName,
+        Item: {
+          VoteId: msgId,
+          VoteData: msgBody,
+        }
+      }).promise();
+
+      deleteResponse = await sqs.deleteMessage({
+        QueueUrl: queueUrl,
+        ReceiptHandle: msg.ReceiptHandle
+      }).promise();
+
+      if (deleteResponse) {
+        console.log(`Message deleted from SQS Queue. Queue URL: ${queueUrl} | Message Receipt Handle: ${msg.ReceiptHandle}`);
+      }
+    }
 
     return 0;
   }

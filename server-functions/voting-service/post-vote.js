@@ -2,9 +2,7 @@
 const AWS = require("aws-sdk");
 const parseEventData = (apiEventData) => {
   if (typeof apiEventData !== "object" || !apiEventData.queryStringParameters) {
-
     throw new Error("Incorrect data format.");
-
   }
 
   return apiEventData.queryStringParameters;
@@ -18,7 +16,7 @@ AWS.config.update({region: "us-east-1"});
  * the HTTP request details as well as the query string parameters
  * in the `event` parameter.
  */
-module.exports.postVote = async (event, context) => {
+module.exports.postVote = async (event) => {
   let sqs = new AWS.SQS({apiVersion: "2012-11-05"});
   let voteQueueUrl;
   let sqsMessageResponse;

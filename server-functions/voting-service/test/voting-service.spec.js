@@ -1,5 +1,6 @@
 const assert = require("assert");
 const { postVote } = require("../post-vote");
+const { handleSqsMessages } = require("../handle-votes");
 let testApiEventData;
 
 
@@ -29,7 +30,8 @@ describe("Post a vote", () => {
 });
 
 describe("Handle a vote message", () => {
-  beforeEach(() => {
-    
+  it("should return 0", async () => {
+    const result = await handleSqsMessages();
+    assert(result === 0);
   });
 });
