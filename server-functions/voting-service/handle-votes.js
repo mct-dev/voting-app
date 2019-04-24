@@ -1,20 +1,26 @@
-'use strict';
-const AWS = require('aws-sdk');
-const sqs = new AWS.SQS({apiVersion: '2012-11-05'});
-const db = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'});
-const dbTableName = 'VotingDB';
-const sqsQueueName = 'voting-app-queue';
+"use strict";
+const AWS = require("aws-sdk");
+const sqs = new AWS.SQS({apiVersion: "2012-11-05"});
+const db = new AWS.DynamoDB.DocumentClient({apiVersion: "2012-08-10"});
+const dbTableName = "VotingDB";
+const sqsQueueName = "voting-app-queue";
 
-AWS.config.update({region: 'us-east-1'});
+AWS.config.update({region: "us-east-1"});
 
-const getMessages = async (queueName) => {
+const getQueueUrl = async (queueName) => {
 
   let queueUrlResponse = await sqs.getQueueUrl({
-    QueueName: queueName + 'omg'
+    QueueName: queueName
   }).promise();
 
+  return queueUrlResponse.QueueUrl;
+
+};
+
+const getMessages = async (queueUrl) => {
+
   let messagesResponse = await sqs.receiveMessage({
-    QueueUrl: queueUrlResponse.QueueUrl,
+    QueueUrl: queueUrl,
     WaitTimeSeconds: 5,
     MaxNumberOfMessages: 10
   }).promise();
@@ -22,16 +28,26 @@ const getMessages = async (queueName) => {
   return messagesResponse && messagesResponse.Messages
     ? messagesResponse.Messages
     : [];
-}
+
+};
 
 module.exports.handleSqsMessages = async (event) => {
+  let queueUrl;
+  let messages;
+  let deleteResponse;
+  let msgId;
+  let msgBody;
 
   try {
-    let messages = await getMessages(sqsQueueName);
+
+    queueUrl = await getQueueUrl(sqsQueueName);
+    messages = await getMessages(queueUrl);
     if (messages.length)
+
       for (let msg of messages) {
-        let msgId = msg.MessageId;
-        let msgBody = JSON.parse(msg.Body);
+
+        msgId = msg.MessageId;
+        msgBody = JSON.parse(msg.Body);
 
         if (!(msgId && msgBody)) {
           break;
@@ -45,8 +61,8 @@ module.exports.handleSqsMessages = async (event) => {
           }
         }).promise();
 
-        let deleteResponse = await sqs.deleteMessage({
-          QueueUrl: queueUrlResponse.QueueUrl,
+        deleteResponse = await sqs.deleteMessage({
+          QueueUrl: queueUrl,
           ReceiptHandle: msg.ReceiptHandle
         }).promise();
 
@@ -54,16 +70,10 @@ module.exports.handleSqsMessages = async (event) => {
 
       }
 
-      return {
-        statusCode: 200,
-      }
+    return 0;
   }
   catch (err) {
-    return {
-      statusCode: 500,
-      body: {
-        error: err.stack
-      }
-    }
+    console.error(err);
+    return 1;
   }
 };

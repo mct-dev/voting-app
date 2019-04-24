@@ -5,13 +5,19 @@
   "main": "index.js",
   "scripts": {
     "deploy": "cd voting-service && sls deploy",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha voting-service/test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "serverless": "^1.40.0",
-    "aws-sdk": "^2.437.0"
+    "aws-sdk": "^2.437.0",
+    "hugo": "0.0.3",
+    "serverless": "^1.40.0"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "eslint": "^5.16.0",
+    "mocha": "^6.1.4"
   }
 }
