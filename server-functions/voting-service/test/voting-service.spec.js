@@ -3,7 +3,6 @@ const { postVote } = require("../post-vote");
 const { handleSqsMessages } = require("../handle-votes");
 let testApiEventData;
 
-
 describe("Post a vote", () => {
 
   beforeEach(() => {

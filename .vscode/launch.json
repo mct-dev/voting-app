@@ -30,7 +30,7 @@
 			"request": "launch",
 			"name": "sls debug handle-vote",
 			"cwd": "${fileDirname}",
-			"program": "serverless",
+			"program": "${workspaceFolder}/server-functions/node_modules/.bin/serverless",
 			"args": [
 				"invoke",
 				"local",

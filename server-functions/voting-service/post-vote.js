@@ -1,11 +1,13 @@
 "use strict";
 const AWS = require("aws-sdk");
 const parseEventData = (apiEventData) => {
-  if (typeof apiEventData !== "object" || !apiEventData.queryStringParameters) {
-    throw new Error("Incorrect data format.");
+
+  // data should be passed in through query string params
+  if (apiEventData.queryStringParameters) {
+    return apiEventData.queryStringParameters;
   }
 
-  return apiEventData.queryStringParameters;
+  return null;
 };
 
 AWS.config.update({region: "us-east-1"});
@@ -22,39 +24,43 @@ module.exports.postVote = async (event) => {
   let sqsMessageResponse;
   let voteData;
 
-  try {
-    voteData = parseEventData(event);
-  }
-  catch (err) {
-    return {
-      statusCode: 400,
-      body: { error: err }
-    };
-  }
+  voteData = parseEventData(event);
 
-  try {
-    voteQueueUrl = await sqs.getQueueUrl({
-      QueueName: "voting-app-queue",
-    }).promise();
-
-    sqsMessageResponse = await sqs.sendMessage({
-      MessageBody: JSON.stringify(voteData),
-      QueueUrl: voteQueueUrl.QueueUrl
-    }).promise();
-  }
-  catch (err) {
+  if (!voteData) {
     return {
-      statusCode: 500,
-      body: { error: err }
+      "statusCode": 500,
+      "isBase64Encoded": false,
+      "headers": {
+        "Content-Type": "text/plain"
+      },
+      "body": JSON.stringify({
+        error: {
+          message: "No query string parameters were found!"
+        },
+        input: event
+      })
     };
+
   }
+  voteQueueUrl = await sqs.getQueueUrl({
+    QueueName: process.env.SQS_QUEUE_NAME,
+  }).promise();
+
+  sqsMessageResponse = await sqs.sendMessage({
+    MessageBody: JSON.stringify(voteData),
+    QueueUrl: voteQueueUrl.QueueUrl
+  }).promise();
 
   return {
-    statusCode: 200,
-    body: {
+    "statusCode": 200,
+    "headers": {
+      "Content-Type": "text/plain"
+    },
+    "isBase64Encoded": false,
+    "body": JSON.stringify({
       voteQueueUrl,
       sqsMessageResponse,
       input: event
-    }
+    })
   };
 };

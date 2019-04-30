@@ -2,14 +2,12 @@
 const AWS = require("aws-sdk");
 const sqs = new AWS.SQS({apiVersion: "2012-11-05"});
 const db = new AWS.DynamoDB.DocumentClient({apiVersion: "2012-08-10"});
-const dbTableName = "VotingDB";
-const sqsQueueName = "voting-app-queue";
 
 AWS.config.update({region: "us-east-1"});
 
-const getQueueUrl = async (queueName) => {
+const getQueueUrl = async () => {
   let queueUrlResponse = await sqs.getQueueUrl({
-    QueueName: queueName
+    QueueName: process.env.SQS_QUEUE_NAME
   }).promise();
 
   return queueUrlResponse.QueueUrl;
@@ -28,50 +26,45 @@ const getMessages = async (queueUrl) => {
 };
 
 module.exports.handleSqsMessages = async () => {
-  let queueUrl;
-  let messages;
-  let deleteResponse;
-  let msgId;
-  let msgBody;
+  const dbTableName = process.env.DYNAMODB_TABLE;
+  const sqsQueueName = "voting-app-queue";
+  const timestamp = new Date().getTime();
 
-  try {
-    queueUrl = await getQueueUrl(sqsQueueName);
-    messages = await getMessages(queueUrl);
+  let queueUrl = await getQueueUrl(sqsQueueName);
+  let messages = await getMessages(queueUrl);
 
-    if (!messages.length) {
-      return 0;
-    }
-
-    for (let msg of messages) {
-      msgId = msg.MessageId;
-      msgBody = JSON.parse(msg.Body);
-
-      if (!(msgId && msgBody)) {
-        break;
-      }
-
-      await db.put({
-        TableName: dbTableName,
-        Item: {
-          VoteId: msgId,
-          VoteData: msgBody,
-        }
-      }).promise();
-
-      deleteResponse = await sqs.deleteMessage({
-        QueueUrl: queueUrl,
-        ReceiptHandle: msg.ReceiptHandle
-      }).promise();
-
-      if (deleteResponse) {
-        console.log(`Message deleted from SQS Queue. Queue URL: ${queueUrl} | Message Receipt Handle: ${msg.ReceiptHandle}`);
-      }
-    }
-
+  if (!messages.length) {
     return 0;
   }
-  catch (err) {
-    console.error(err);
-    return 1;
+
+  for (let msg of messages) {
+    let msgId = msg.MessageId;
+    let msgBody = JSON.parse(msg.Body);
+
+    if (!(msgId && msgBody)) {
+      break;
+    }
+
+    await db.put({
+      TableName: dbTableName,
+      Item: {
+        id: msgId,
+        VoteData: msgBody,
+        createdAt: timestamp,
+        updatedAt: timestamp
+      }
+    }).promise();
+
+    let deleteResponse = await sqs.deleteMessage({
+      QueueUrl: queueUrl,
+      ReceiptHandle: msg.ReceiptHandle
+    }).promise();
+
+    if (deleteResponse) {
+      // `console` will log to CloudWatch automatically
+      console.log(`Message deleted from SQS Queue. Queue URL: ${queueUrl} | Message Receipt Handle: ${msg.ReceiptHandle}`);
+    }
   }
+
+  return 0;
 };
