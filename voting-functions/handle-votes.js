@@ -31,41 +31,54 @@ module.exports.handleSqsMessages = async () => {
   const timestamp = new Date().getTime();
 
   let queueUrl = await getQueueUrl(sqsQueueName);
-  let messages = await getMessages(queueUrl);
+  let canProcessMessages = true;
 
-  if (!messages.length) {
-    return 0;
-  }
+  while (canProcessMessages) {
+    let messages = await getMessages(queueUrl);
 
-  for (let msg of messages) {
-    let msgId = msg.MessageId;
-    let msgBody = JSON.parse(msg.Body);
-
-    if (!(msgId && msgBody)) {
-      break;
+    if (!messages || !messages.length) {
+      console.log(`No messages found in queue ${sqsQueueName}.`);
+      canProcessMessages = false;
+      return 0;
     }
 
-    let putResponse = await db.put({
-      TableName: dbTableName,
-      Item: {
-        id: msgId,
-        VoteData: msgBody,
-        createdAt: timestamp,
-        updatedAt: timestamp
+    for (let msg of messages) {
+      let msgId = msg.MessageId;
+      let msgBody = JSON.parse(msg.Body);
+
+      if (!(msgId && msgBody)) {
+        // go to next message
+        continue;
       }
-    }).promise();
+      
+      console.log(`processing message (id: ${msgId})`);
 
-    if (putResponse) {
-      console.log("Put response returned:", putResponse);
-    }
+      try {
+        await db.put({
+          TableName: dbTableName,
+          Item: {
+            id: msgId,
+            VoteData: msgBody,
+            createdAt: timestamp,
+            updatedAt: timestamp
+          }
+        }).promise();
 
-    let deleteResponse = await sqs.deleteMessage({
-      QueueUrl: queueUrl,
-      ReceiptHandle: msg.ReceiptHandle
-    }).promise();
+        console.log(`DB PUT successful! Message Id: ${msgId}`);
+      } catch (err) {
+        console.error(`DB PUT failed! Message Id: ${msgId}. Error: ${err}`);
+      }
 
-    if (deleteResponse) {
-      console.log(`Message deleted from SQS Queue. Queue URL: ${queueUrl} | Message Receipt Handle: ${msg.ReceiptHandle}`);
+      try {
+        await sqs.deleteMessage({
+          QueueUrl: queueUrl,
+          ReceiptHandle: msg.ReceiptHandle
+        }).promise();
+
+        console.log(`Message deleted from SQS Queue. Queue URL: ${queueUrl} | Message Receipt Handle: ${msg.ReceiptHandle}`);
+      } catch (err) {
+        console.error(`Message deletion FAILED. Message Receipt Handle: ${msg.ReceiptHandle}. Error: ${err}`);
+      }
     }
   }
 
