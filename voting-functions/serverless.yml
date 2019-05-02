@@ -6,7 +6,7 @@ provider:
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-1'}
   environment:
-    DYNAMODB_TABLE: ${self:service}-${self:provider.stage}-table
+    DYNAMODB_TABLE: ${file(../voting-db/serverless.yml):service}-${self:provider.stage}-table
     SQS_QUEUE_NAME: ${self:service}-${self:provider.stage}-queue
     SNS_TOPIC: ${self:service}-${self:provider.stage}-topic
   iamRoleStatements:
@@ -44,19 +44,3 @@ resources:
       Type: 'AWS::SQS::Queue'
       Properties:
         QueueName: ${self:provider.environment.SQS_QUEUE_NAME}
-    VotesDynamoDbTable:
-      Type: 'AWS::DynamoDB::Table'
-      DeletionPolicy: Retain
-      Properties:
-        AttributeDefinitions:
-          -
-            AttributeName: id
-            AttributeType: S
-        KeySchema:
-          -
-            AttributeName: id
-            KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-        TableName: ${self:provider.environment.DYNAMODB_TABLE}

@@ -1,18 +1,17 @@
 {
-  "name": "server-functions",
+  "name": "voting-app",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "A voting pipeline built with the serverless framework.",
   "scripts": {
-    "deploy": "cd voting-service && sls deploy",
-    "test": "mocha voting-service/test"
+    "deploy:functions": "cd voting-functions && sls deploy",
+    "deploy:db": "cd voting-db && sls deploy",
+    "test": "mocha voting-functions/test"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "aws-sdk": "^2.437.0",
-    "hugo": "0.0.3",
     "serverless": "^1.40.0"
   },
   "devDependencies": {

@@ -1,0 +1,36 @@
+service: voting-db
+
+custom:
+  tableName: ${self:service}-${self:provider.stage}-table
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+
+resources:
+  Resources:
+    VotesDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.tableName}
+
+Outputs:
+  VotesTableArn:
+    Value:
+      Fn::GetAtt:
+        - VotesDynamoDbTable
+        - Arn
+    Export:
+      Name: ${self:provider.stage}-VotesDbTableArn
