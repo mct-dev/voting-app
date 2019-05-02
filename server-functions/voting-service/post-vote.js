@@ -12,14 +12,10 @@ const parseEventData = (apiEventData) => {
 
 AWS.config.update({region: "us-east-1"});
 
-/**
- * Function accepts event data from AWS API Gateway endpoint.
- * This endpoint should use the "LAMBDA_PROXY" Type, providing
- * the HTTP request details as well as the query string parameters
- * in the `event` parameter.
- */
 module.exports.postVote = async (event) => {
-  let sqs = new AWS.SQS({apiVersion: "2012-11-05"});
+  const sqs = new AWS.SQS({apiVersion: "2012-11-05"});
+  const sns = new AWS.SNS({apiVersion: "2010-03-31"});
+  let snsPublishPromise;
   let voteQueueUrl;
   let sqsMessageResponse;
   let voteData;
@@ -28,12 +24,12 @@ module.exports.postVote = async (event) => {
 
   if (!voteData) {
     return {
-      "statusCode": 500,
-      "isBase64Encoded": false,
-      "headers": {
+      statusCode: 500,
+      isBase64Encoded: false,
+      headers: {
         "Content-Type": "text/plain"
       },
-      "body": JSON.stringify({
+      body: JSON.stringify({
         error: {
           message: "No query string parameters were found!"
         },
@@ -51,13 +47,23 @@ module.exports.postVote = async (event) => {
     QueueUrl: voteQueueUrl.QueueUrl
   }).promise();
 
+  // notify our second function that there's a new vote to handle
+  snsPublishPromise = await sns.publish({
+    Message: "New Vote Posted!",
+    TopicArn: process.env.SNS_TOPIC_ARN
+  });
+
+  if (snsPublishPromise) {
+    console.log("SNS publish returned: ", snsPublishPromise);
+  }
+
   return {
-    "statusCode": 200,
-    "headers": {
+    statusCode: 200,
+    headers: {
       "Content-Type": "text/plain"
     },
-    "isBase64Encoded": false,
-    "body": JSON.stringify({
+    isBase64Encoded: false,
+    body: JSON.stringify({
       voteQueueUrl,
       sqsMessageResponse,
       input: event

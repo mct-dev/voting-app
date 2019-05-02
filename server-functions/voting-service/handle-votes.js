@@ -45,7 +45,7 @@ module.exports.handleSqsMessages = async () => {
       break;
     }
 
-    await db.put({
+    let putResponse = await db.put({
       TableName: dbTableName,
       Item: {
         id: msgId,
@@ -55,13 +55,16 @@ module.exports.handleSqsMessages = async () => {
       }
     }).promise();
 
+    if (putResponse) {
+      console.log("Put response returned:", putResponse);
+    }
+
     let deleteResponse = await sqs.deleteMessage({
       QueueUrl: queueUrl,
       ReceiptHandle: msg.ReceiptHandle
     }).promise();
 
     if (deleteResponse) {
-      // `console` will log to CloudWatch automatically
       console.log(`Message deleted from SQS Queue. Queue URL: ${queueUrl} | Message Receipt Handle: ${msg.ReceiptHandle}`);
     }
   }

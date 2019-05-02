@@ -3,11 +3,25 @@ service: voting-app
 provider:
   name: aws
   runtime: nodejs8.10
-  stage: dev
-  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
   environment:
-    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}-table
-    SQS_QUEUE_NAME: ${self:service}-${opt:stage, self:provider.stage}-queue
+    DYNAMODB_TABLE: ${self:service}-${self:provider.stage}-table
+    SQS_QUEUE_NAME: ${self:service}-${self:provider.stage}-queue
+    SNS_TOPIC: ${self:service}-${self:provider.stage}-topic
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - sqs:*
+      Resource: {"Fn::Join" : ["", ["arn:aws:sqs:${self:provider.region}:", {"Ref":"AWS::AccountId"}, ":${self:provider.environment.SQS_QUEUE_NAME}" ] ] }
+    - Effect: Allow
+      Action:
+        - dynamoDB:*
+      Resource: {"Fn::Join" : ["", ["arn:aws:dynamodb:${self:provider.region}:", {"Ref":"AWS::AccountId"}, ":table/${self:provider.environment.DYNAMODB_TABLE}" ] ] }
+    - Effect: Allow
+      Action:
+        - SNS:*
+      Resource: {"Fn::Join":["", ["arn:aws:sns:${self:provider.region}:", {"Ref":"AWS::AccountId"}, ":${self:provider.environment.SNS_TOPIC}"]]}
 
 functions:
   post-vote:
@@ -16,20 +30,13 @@ functions:
       - http:
           path: vote
           method: post
-    iamRoleStatements:
-      - Effect: "Allow"
-        Action:
-          - sqs:*
-        Resource: "*"
+    environment:
+      SNS_TOPIC_ARN: {"Fn::Join":["", ["arn:aws:sns:${self:provider.region}:", {"Ref":"AWS::AccountId"}, ":${self:provider.environment.SNS_TOPIC}"]]}
   handle-votes:
     handler: handle-votes.handleSqsMessages
     events:
-      - schedule: rate(2 minutes)
-    iamRoleStatements:
-      - Effect: "Allow"
-        Action:
-          - dynamoDB:*
-        Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+      - schedule: rate(1 minute)
+      - sns: ${self:provider.environment.SNS_TOPIC}
 
 resources:
   Resources:
