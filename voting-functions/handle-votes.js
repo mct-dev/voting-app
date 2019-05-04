@@ -25,10 +25,17 @@ const getMessages = async (queueUrl) => {
     : [];
 };
 
-module.exports.handleSqsMessages = async () => {
+module.exports.handleSqsMessages = async (event) => {
   const dbTableName = process.env.DYNAMODB_TABLE;
   const sqsQueueName = "voting-app-queue";
   const timestamp = new Date().getTime();
+
+  if (event && event.Records) {
+    console.log("Event Records: ", event.Records);
+    let message = event.Records[0].Message;
+    console.log("Event received.");
+    console.log(`Event SNS Message: ${message}.`);
+  }
 
   let queueUrl = await getQueueUrl(sqsQueueName);
   let canProcessMessages = true;

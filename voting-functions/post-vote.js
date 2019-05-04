@@ -12,12 +12,11 @@ const parseEventData = (apiEventData) => {
 
 AWS.config.update({region: "us-east-1"});
 
-module.exports.postVote = async (event) => {
+module.exports.postVote = async (event, context) => {
   const sqs = new AWS.SQS({apiVersion: "2012-11-05"});
   const sns = new AWS.SNS({apiVersion: "2010-03-31"});
   let snsPublishPromise;
   let voteQueueUrl;
-  let sqsMessageResponse;
   let voteData;
 
   voteData = parseEventData(event);
@@ -30,6 +29,7 @@ module.exports.postVote = async (event) => {
         "Content-Type": "text/plain"
       },
       body: JSON.stringify({
+        awsRequestId: context.awsRequestId,
         error: {
           message: "No query string parameters were found!"
         },
@@ -38,24 +38,32 @@ module.exports.postVote = async (event) => {
     };
 
   }
-  voteQueueUrl = await sqs.getQueueUrl({
-    QueueName: process.env.SQS_QUEUE_NAME,
-  }).promise();
-
-  sqsMessageResponse = await sqs.sendMessage({
-    MessageBody: JSON.stringify(voteData),
-    QueueUrl: voteQueueUrl.QueueUrl
-  }).promise();
+  
+  try {
+    voteQueueUrl = await sqs.getQueueUrl({
+      QueueName: process.env.SQS_QUEUE_NAME,
+    }).promise();
+  
+    await sqs.sendMessage({
+      MessageBody: JSON.stringify(voteData),
+      QueueUrl: voteQueueUrl.QueueUrl
+    }).promise();
+    console.log("SQS message sent successfully!");
+  } catch (err) {
+    console.error(`SQS message send FAILED. Error: ${err}`);
+  }
 
   // notify our second function that there's a new vote to handle
-  snsPublishPromise = await sns.publish({
-    Message: "New Vote Posted!",
-    TopicArn: process.env.SNS_TOPIC_ARN
-  });
-
-  if (snsPublishPromise) {
-    console.log("SNS publish returned: ", snsPublishPromise);
+  try {
+    await sns.publish({
+      Message: "New Vote Posted!",
+      TopicArn: process.env.SNS_TOPIC_ARN
+    });
+    console.log("SNS published successfully!");
+  } catch (err) {
+    console.error(`SQS message send FAILED. Error: ${err}`);
   }
+
 
   return {
     statusCode: 200,
@@ -64,8 +72,8 @@ module.exports.postVote = async (event) => {
     },
     isBase64Encoded: false,
     body: JSON.stringify({
-      voteQueueUrl,
-      sqsMessageResponse,
+      awsRequestId: context.awsRequestId,
+      message: "Vote successfully processed.",
       input: event
     })
   };
