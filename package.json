@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "A voting pipeline built with the serverless framework.",
   "scripts": {
-    "deploy:functions": "cd voting-functions && sls deploy",
-    "deploy:db": "cd voting-db && sls deploy",
-    "test": "mocha voting-functions/test"
+    "deploy": "cd voting-functions && serverless deploy",
+    "remove": "cd voting-functions && serverless remove",
+    "deploy:db": "cd voting-db && serverless deploy"
   },
   "keywords": [],
   "author": "",

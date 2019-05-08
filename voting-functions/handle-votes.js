@@ -27,7 +27,7 @@ const getMessages = async (queueUrl) => {
 
 module.exports.handleSqsMessages = async (event) => {
   const dbTableName = process.env.DYNAMODB_TABLE;
-  const sqsQueueName = "voting-app-queue";
+  const sqsQueueName = process.env.SQS_QUEUE_NAME;
   const timestamp = new Date().getTime();
 
   if (event && event.Records) {
@@ -37,8 +37,12 @@ module.exports.handleSqsMessages = async (event) => {
     console.log(`Event SNS Message: ${message}.`);
   }
 
-  let queueUrl = await getQueueUrl(sqsQueueName);
   let canProcessMessages = true;
+  let queueUrl = await getQueueUrl(sqsQueueName);
+
+  if (!queueUrl) {
+    canProcessMessages = false;
+  }
 
   while (canProcessMessages) {
     let messages = await getMessages(queueUrl);
@@ -74,6 +78,7 @@ module.exports.handleSqsMessages = async (event) => {
         console.log(`DB PUT successful! Message Id: ${msgId}`);
       } catch (err) {
         console.error(`DB PUT failed! Message Id: ${msgId}. Error: ${err}`);
+        return 1;
       }
 
       try {
@@ -85,6 +90,7 @@ module.exports.handleSqsMessages = async (event) => {
         console.log(`Message deleted from SQS Queue. Queue URL: ${queueUrl} | Message Receipt Handle: ${msg.ReceiptHandle}`);
       } catch (err) {
         console.error(`Message deletion FAILED. Message Receipt Handle: ${msg.ReceiptHandle}. Error: ${err}`);
+        return 1;
       }
     }
   }
