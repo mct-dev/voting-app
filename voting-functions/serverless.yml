@@ -12,7 +12,7 @@ provider:
   iamRoleStatements:
     - Effect: Allow
       Action:
-        - sqs:*
+        - SQS:*
       Resource: {"Fn::Join" : ["", ["arn:aws:sqs:${self:provider.region}:", {"Ref":"AWS::AccountId"}, ":${self:provider.environment.SQS_QUEUE_NAME}" ] ] }
     - Effect: Allow
       Action:
